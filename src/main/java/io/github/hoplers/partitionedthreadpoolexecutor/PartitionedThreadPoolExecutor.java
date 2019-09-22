@@ -1,8 +1,9 @@
+package io.github.hoplers.partitionedthreadpoolexecutor;
+
 import lombok.NonNull;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class PartitionedThreadPoolExecutor implements PartitionedExecutor {

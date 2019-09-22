@@ -1,3 +1,5 @@
+package io.github.hoplers.partitionedthreadpoolexecutor;
+
 import java.util.concurrent.BlockingQueue;
 
 @FunctionalInterface
