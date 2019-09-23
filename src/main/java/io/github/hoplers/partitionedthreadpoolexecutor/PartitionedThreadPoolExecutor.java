@@ -35,6 +35,10 @@ public class PartitionedThreadPoolExecutor implements PartitionedExecutor {
         this(numOfPartitions,blockingQueueProvider,Executors.defaultThreadFactory(),rejectedExecutionHandler,defaultPartitioner);
     }
 
+    public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider, ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler){
+        this(numOfPartitions,blockingQueueProvider,threadFactory,rejectedExecutionHandler,defaultPartitioner);
+    }
+
     public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider,
                                          ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler,
                                          Partitioner partitioner){
