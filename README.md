@@ -7,6 +7,8 @@ Each partition has its own queue and one thread for execution, allowing strong o
 
 ## Usage
 
+**Java version 8 or above is required to use this library.**
+
 Add dependency to maven -
 ```
   <groupId>io.github.hoplers</groupId>
