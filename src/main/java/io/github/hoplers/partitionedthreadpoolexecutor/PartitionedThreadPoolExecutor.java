@@ -11,7 +11,7 @@ public class PartitionedThreadPoolExecutor implements PartitionedExecutor {
     private static final ThreadPoolExecutor.AbortPolicy defaultHandler = new ThreadPoolExecutor.AbortPolicy();
     private final static Partitioner defaultPartitioner = (numOfPartitions, partitionKey) -> partitionKey.hashCode() % numOfPartitions;
 
-    private final int numOfPartitions;
+    private int partitionCount;
     private final BlockingQueueProvider blockingQueueProvider;
     private final ThreadFactory threadFactory;
     private final RejectedExecutionHandler rejectedExecutionHandler;
@@ -19,31 +19,31 @@ public class PartitionedThreadPoolExecutor implements PartitionedExecutor {
 
     private final Map<Integer, ThreadPoolExecutor> partitionsToThreadPoolExecutors;
 
-    public PartitionedThreadPoolExecutor(int numOfPartitions){
-        this(numOfPartitions, LinkedBlockingQueue::new);
+    public PartitionedThreadPoolExecutor(int partitionCount){
+        this(partitionCount, LinkedBlockingQueue::new);
     }
 
-    public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider){
-        this(numOfPartitions, blockingQueueProvider, Executors.defaultThreadFactory());
+    public PartitionedThreadPoolExecutor(int partitionCount, BlockingQueueProvider blockingQueueProvider){
+        this(partitionCount, blockingQueueProvider, Executors.defaultThreadFactory());
     }
 
-    public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider, ThreadFactory threadFactory){
-        this(numOfPartitions,blockingQueueProvider,threadFactory,defaultHandler,defaultPartitioner);
+    public PartitionedThreadPoolExecutor(int partitionCount, BlockingQueueProvider blockingQueueProvider, ThreadFactory threadFactory){
+        this(partitionCount,blockingQueueProvider,threadFactory,defaultHandler,defaultPartitioner);
     }
 
-    public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider, RejectedExecutionHandler rejectedExecutionHandler){
-        this(numOfPartitions,blockingQueueProvider,Executors.defaultThreadFactory(),rejectedExecutionHandler,defaultPartitioner);
+    public PartitionedThreadPoolExecutor(int partitionCount, BlockingQueueProvider blockingQueueProvider, RejectedExecutionHandler rejectedExecutionHandler){
+        this(partitionCount,blockingQueueProvider,Executors.defaultThreadFactory(),rejectedExecutionHandler,defaultPartitioner);
     }
 
-    public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider, ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler){
-        this(numOfPartitions,blockingQueueProvider,threadFactory,rejectedExecutionHandler,defaultPartitioner);
+    public PartitionedThreadPoolExecutor(int partitionCount, BlockingQueueProvider blockingQueueProvider, ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler){
+        this(partitionCount,blockingQueueProvider,threadFactory,rejectedExecutionHandler,defaultPartitioner);
     }
 
-    public PartitionedThreadPoolExecutor(int numOfPartitions, BlockingQueueProvider blockingQueueProvider,
+    public PartitionedThreadPoolExecutor(int partitionCount, BlockingQueueProvider blockingQueueProvider,
                                          ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler,
                                          Partitioner partitioner){
 
-        this.numOfPartitions = numOfPartitions;
+        this.partitionCount = partitionCount;
         this.blockingQueueProvider = blockingQueueProvider;
         this.threadFactory = threadFactory;
         this.rejectedExecutionHandler = rejectedExecutionHandler;
@@ -93,7 +93,7 @@ public class PartitionedThreadPoolExecutor implements PartitionedExecutor {
     @Override
     public boolean awaitTermination(long totalTimeout, TimeUnit timeUnit) throws InterruptedException {
         long totalNanos = timeUnit.toNanos(totalTimeout);
-        long nanosPerPartition = totalNanos / numOfPartitions;
+        long nanosPerPartition = totalNanos / partitionCount;
         for (ThreadPoolExecutor partitionThreadPoolExecutor : partitionsToThreadPoolExecutors.values()){
            if (!partitionThreadPoolExecutor.awaitTermination(nanosPerPartition,TimeUnit.NANOSECONDS)){
                return false;
@@ -102,9 +102,23 @@ public class PartitionedThreadPoolExecutor implements PartitionedExecutor {
         return true;
     }
 
+    @Override
+    public void setPartitionCountAndShutdownRemovedPartitions(int newPartitionCount) {
+        if (this.partitionCount > newPartitionCount) {
+            shutdownRemovedPartitions(newPartitionCount);
+        }
+        this.partitionCount = newPartitionCount;
+    }
+
+    private void shutdownRemovedPartitions(int newPartitionCount) {
+        for (int i = newPartitionCount; i < partitionCount; i++){
+            partitionsToThreadPoolExecutors.remove(i).shutdown();
+        }
+    }
+
     private ThreadPoolExecutor getPartitionThreadPoolExecutor(String partitionKey) {
         return partitionsToThreadPoolExecutors.computeIfAbsent(
-                        partitioner.getPartitionForKey(numOfPartitions, partitionKey),
+                        partitioner.getPartitionForKey(partitionCount, partitionKey),
                         (numOfPartitions) -> createNewPartition());
     }
 

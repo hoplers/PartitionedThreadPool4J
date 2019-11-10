@@ -22,4 +22,6 @@ public interface PartitionedExecutor {
 
     boolean awaitTermination(long timeout, TimeUnit timeUnit) throws InterruptedException;
 
+    void setPartitionCountAndShutdownRemovedPartitions(int partitionCount);
+
 }
